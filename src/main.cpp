@@ -21,6 +21,19 @@ Adafruit_NeoPixel strip = Adafruit_NeoPixel(59, PIN, NEO_GRB + NEO_KHZ800);
 // and minimize distance between Arduino and first pixel.  Avoid connecting
 // on a live circuit...if you must, connect GND first.
 
+
+
+#include "WiFi.h"
+#include "ESPAsyncWebServer.h"
+ 
+#include <credentials.h>
+#include <ArduinoJson.h>
+
+
+AsyncWebServer server(80);
+
+
+
 // Input a value 0 to 255 to get a color value.
 // The colours are a transition r - g - b - back to r.
 uint32_t Wheel(byte WheelPos) {
@@ -109,18 +122,104 @@ void theaterChaseRainbow(uint8_t wait) {
 
 
 void setup() {
-  // This is for Trinket 5V 16MHz, you can remove these three lines if you are not using a Trinket
-  #if defined (__AVR_ATtiny85__)
-    if (F_CPU == 16000000) clock_prescale_set(clock_div_1);
-  #endif
-  // End of trinket special code
 
+
+
+
+Serial.begin(115200);
+ 
+  WiFi.begin(ssid, password);
+ 
+  while (WiFi.status() != WL_CONNECTED) {
+    delay(1000);
+    Serial.println("Connecting to WiFi..");
+  }
+ 
+  Serial.println(WiFi.localIP());
+ 
+  server.on(
+    "/post",
+    HTTP_POST,
+    [](AsyncWebServerRequest * request){},
+    NULL,
+    [](AsyncWebServerRequest * request, uint8_t *data, size_t len, size_t index, size_t total) {
+ 
+      for (size_t i = 0; i < len; i++) {
+        Serial.write(data[i]);
+      }
+ 
+      Serial.println();
+ 
+ 
+  /*
+    {
+      "mode": 1,
+      "color": [123,255,0],
+      "skips_every": 3,
+      "length": 10
+    }
+
+
+  */
+
+
+  //   char json[] = "{\"sensor\":\"gps\",\"time\":1351824120,\"data\":[48.756080,2.302038]}";
+      char json[] =  "{\"mode\":1,\"color\":[123,255,0],\"skips_every\":3,\"length\":10}";
+      
+      DynamicJsonDocument doc(1024);
+      deserializeJson(doc, data);
+
+      uint8_t color_red = doc["color"][0];
+      uint8_t color_green = doc["color"][1];
+      uint8_t color_blue = doc["color"][2];
+      uint8_t skips_every = doc["skips_every"] ;
+      uint16_t enabled_length = doc["length"] ;
+ 
+ 
+      Serial.println("colors");
+      Serial.println(color_red);
+      Serial.println(color_green);
+      Serial.println(color_blue);
+      Serial.println(skips_every);
+      Serial.println(enabled_length);
+      request->send(200);
+
+      strip.setBrightness(255);
+
+      colorWipe(strip.Color(color_red, color_green, color_blue), 50);
+      
+  });
+ 
+  server.begin();
+
+
+  
   strip.begin();
-  strip.setBrightness(50);
+  strip.setBrightness(255);
   strip.show(); // Initialize all pixels to 'off'
+
+  colorWipe(strip.Color(139, 0, 255), 50);
+  colorWipe(strip.Color(0, 0, 0), 50); 
+
 }
 
 void loop() {
+return; 
+  strip.setBrightness(50);
+  
+  colorWipe(strip.Color(139, 0, 255), 50);
+  colorWipe(strip.Color(255, 0, 255), 50);
+  
+  colorWipe(strip.Color(0, 0, 0), 50); 
+  strip.setBrightness(255);
+
+  colorWipe(strip.Color(139, 0, 255), 50);
+  colorWipe(strip.Color(255, 0, 255), 50);
+  
+  colorWipe(strip.Color(0, 0, 0), 50);
+
+
+  return;
   // Some example procedures showing how to display to the pixels:
   colorWipe(strip.Color(255, 0, 0), 50); // Red
   colorWipe(strip.Color(0, 255, 0), 50); // Green
